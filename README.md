@@ -73,7 +73,7 @@ group, dataset or attribute is renamed, moved, removed or changes meaning.
 
 | File | Support |
 |---|---|
-| No `format_version` (legacy) | Best effort. Timestamps are found by naming convention; region and gap attributes from older files are read. |
+| No `format_version` (legacy) | Best effort. Timestamps are found by naming convention, including the comma-named datasets that export-utils 0.0.1 wrote before January 2026; region and gap attributes from older files are read. |
 | `1.x` | Supported |
 | `2.0` and later | Rejected with `UnsupportedFormatVersion`. Install a newer moberg-h5. |
 

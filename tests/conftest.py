@@ -205,3 +205,40 @@ def legacy_path(tmp_path: Path) -> Path:
         _dataset(file, "TCD_Left_Timestamps", EEG_TIMESTAMPS[:3])
         _dataset(file, "TCD_Left", np.array([1, 2, 3], dtype=np.float32), _meta("TCD,Left,SBI,Float,Multigon", units="cm/s"))
     return path
+
+
+def _comma_dataset(group: h5py.Group, name: str, data: np.ndarray, units: str | None = None) -> None:
+    dataset = group.create_dataset(name, data.shape, data.dtype, data, maxshape=(None,))
+    if units is not None:
+        dataset.attrs["number_points"] = data.shape[0]
+        dataset.attrs["start_time"] = 0
+        dataset.attrs["end_time"] = 0
+        dataset.attrs["units"] = units
+
+
+@pytest.fixture
+def comma_layout_path(tmp_path: Path) -> Path:
+    """A file shaped like export-utils 0.0.1 output (every build before January 2026),
+    checked against that writer run on a synthetic archive: datasets named after the
+    full CNS basename, timestamps in "<basename>,timestamps", EEG channels named after
+    the electrode, and only number_points, start_time, end_time and units attributes."""
+    path = tmp_path / "comma.h5"
+    with h5py.File(path, "w") as file:
+        eeg = file.create_group("EEG")
+        for lead in ("C3", "C4", "Cz"):
+            _comma_dataset(eeg, lead, np.arange(10, dtype=np.float32), units="uV")
+        _comma_dataset(eeg, "EEG,Composite,SampleSeries,Composite,Pytest,timestamps", EEG_TIMESTAMPS)
+
+        waves = file.create_group("Waveforms")
+        _comma_dataset(waves, "ABP,na,SampleSeries,Float,Pytest", np.linspace(80, 120, 10).astype(np.float32), units="mmHg")
+        _comma_dataset(waves, "ABP,na,SampleSeries,Float,Pytest,timestamps", EEG_TIMESTAMPS)
+
+        trends = file.create_group("Trends")
+        _comma_dataset(trends, "HR,na,Numeric,Float,Pytest", np.arange(5, dtype=np.float32) + 60, units="bpm")
+        _comma_dataset(trends, "HR,na,Numeric,Float,Pytest,timestamps", EEG_TIMESTAMPS[:5])
+        _comma_dataset(trends, "PbtO2,na,SparseNumeric,Float,Pytest", np.arange(3, dtype=np.float32) + 20, units="mmHg")
+        _comma_dataset(trends, "PbtO2,na,SparseNumeric,Float,Pytest,timestamps", EEG_TIMESTAMPS[:3])
+
+        _comma_dataset(file, "TCD,Left,SBI,Float,Multigon", np.arange(3, dtype=np.float32), units="cm/s")
+        _comma_dataset(file, "TCD,Left,SBI,Float,Multigon,timestamps", EEG_TIMESTAMPS[:3])
+    return path

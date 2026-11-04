@@ -140,3 +140,37 @@ def test_read_frame_without_pandas(v1_path, monkeypatch):
         with pytest.raises(ImportError, match=r"moberg-h5\[pandas\]"):
             rec.read_frame("EEG/C3")
     assert len(timestamps) == 10
+
+
+@pytest.mark.parametrize(
+    "make_bounds",
+    [
+        lambda start_ns, end_ns: (np.datetime64(start_ns, "ns"), np.datetime64(end_ns, "ns")),
+        lambda start_ns, end_ns: (pd.Timestamp(start_ns, unit="ns", tz="UTC"), pd.Timestamp(end_ns, unit="ns", tz="UTC")),
+        lambda start_ns, end_ns: (pd.Timestamp(start_ns, unit="ns"), pd.Timestamp(end_ns, unit="ns").tz_localize("UTC").tz_convert("US/Eastern")),
+        lambda start_ns, end_ns: (np.datetime64(start_ns // 10, "10ns"), np.datetime64(end_ns // 10, "10ns")),
+    ],
+)
+def test_sub_microsecond_bounds_round_up(v1_path, make_bounds):
+    start_ns = int(TS[0]) * 1000 + 500
+    end_ns = int(TS[1]) * 1000 + 500
+    start, end = make_bounds(start_ns, end_ns)
+    with moberg_h5.open(v1_path) as rec:
+        timestamps, values = rec.read("EEG/C3", start, end)
+        gaps = rec.gaps("EEG/C3", end=np.datetime64(int(TS[GAP_AFTER]) * 1000 + 1, "ns"))
+
+    np.testing.assert_array_equal(timestamps, TS[1:2])
+    np.testing.assert_array_equal(values, [1.0])
+    assert gaps.shape == (1, 2)
+
+
+def test_whole_microsecond_and_coarse_bounds_are_exact():
+    from moberg_h5._time import to_epoch_us
+
+    assert to_epoch_us(np.datetime64(1_700_000_000_123_456_000, "ns")) == 1_700_000_000_123_456
+    assert to_epoch_us(np.datetime64(1_700_000_000_123_456_001, "ns")) == 1_700_000_000_123_457
+    assert to_epoch_us(np.datetime64(-1_500, "ns")) == -1
+    assert to_epoch_us(np.datetime64("2026-11-04T12:00:00", "s")) == 1_793_793_600_000_000
+    assert to_epoch_us(pd.Timestamp("2026-11-04T12:00:00.0000005Z")) == 1_793_793_600_000_001
+    with pytest.raises(ValueError):
+        to_epoch_us(np.datetime64("NaT", "ns"))

@@ -18,7 +18,9 @@ if TYPE_CHECKING:
 SUPPORTED_MAJOR = 1
 DATA_GROUPS = ("EEG", "Waveforms", "Trends", "Other")
 ANNOTATIONS_GROUP = "Annotations"
-AUX_SUFFIXES = ("_Timestamps", "_ContinuousRegions", "_Gaps", "_ColumnNames")
+# export-utils 0.0.1 named datasets after the full CNS basename and its timestamps "<basename>,timestamps".
+COMMA_TIMESTAMPS_SUFFIX = ",timestamps"
+AUX_SUFFIXES = ("_Timestamps", "_ContinuousRegions", "_Gaps", "_ColumnNames", COMMA_TIMESTAMPS_SUFFIX)
 EEG_MODALITIES = ("EEG", "HFEEG")
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)$")
 
@@ -33,7 +35,9 @@ class Signal:
     ``path`` is the absolute HDF5 path of the values and ``timestamps_path`` the
     dataset holding their timestamps. ``modality`` and ``channel`` come from the CNS
     basename in ``label``: for ``/EEG/HFEEG_C3`` the modality is ``HFEEG`` and the
-    channel ``C3``. ``units`` is None when the source recorded no units.
+    channel ``C3``, and the channel of a source-qualified dataset such as
+    ``/EEG/EEG_Composite__SampleSeries__Composite__Amp1020_C3`` is also ``C3``.
+    ``units`` is None when the source recorded no units.
     ``sampling_rate`` is the nominal rate in Hz written by format 1.x converters;
     legacy files and trends have none. ``archive`` names the ``Patient_*`` group in
     files that hold several archives, and is None otherwise.
@@ -380,14 +384,18 @@ def _legacy_timestamps_path(
 
     EEG and HFEEG channel datasets share their basename's timestamps. When two
     basenames in a group map to the same name, the writer qualifies both as
-    ``<Modality>_<Location>__<Type>__<Representation>__<Source>``.
+    ``<Modality>_<Location>__<Type>__<Representation>__<Source>``. Files from
+    export-utils 0.0.1 name datasets ``<basename>`` with ``<basename>,timestamps``.
     """
+    if _basename_parts(name) is not None:
+        timestamps = group.get(name + COMMA_TIMESTAMPS_SUFFIX)
+        return timestamps.name if isinstance(timestamps, h5py.Dataset) else None
+
     parts = _basename_parts(_attr_str(dataset.attrs, "label"))
     candidates = []
     if parts is not None and _is_channelized(parts):
         stem = f"{parts['modality']}_{parts['location']}"
-        qualified = f"{stem}__{parts['data_type']}__{parts['representation']}__{parts['source']}"
-        candidates += [f"{qualified}_Timestamps", f"{stem}_Timestamps"]
+        candidates += [f"{_qualified_name(parts)}_Timestamps", f"{stem}_Timestamps"]
     elif parts is None and group_name == "EEG" and not name.startswith("qEEG"):
         candidates.append("HFEEG_Composite_Timestamps" if name.startswith("HFEEG_") else "EEG_Composite_Timestamps")
     candidates.append(f"{name}_Timestamps")
@@ -396,7 +404,45 @@ def _legacy_timestamps_path(
         timestamps = group.get(candidate)
         if isinstance(timestamps, h5py.Dataset):
             return timestamps.name
+
+    if parts is None and group_name == "EEG":
+        return _comma_layout_channel_timestamps(group, dataset)
     return None
+
+
+def _comma_layout_channel_timestamps(group: h5py.Group, dataset: h5py.Dataset) -> str | None:
+    """Match an export-utils 0.0.1 EEG channel to its basename's ``,timestamps`` dataset.
+
+    Those files name channels after the electrode only and record no label, so
+    with several EEG basenames (EEG and HFEEG, or two amplifiers) the channel is
+    matched by length.
+    """
+    shared = []
+    for candidate_name in group:
+        if not candidate_name.endswith(COMMA_TIMESTAMPS_SUFFIX):
+            continue
+        parts = _basename_parts(candidate_name[: -len(COMMA_TIMESTAMPS_SUFFIX)])
+        candidate = group.get(candidate_name)
+        if parts is not None and _is_channelized(parts) and isinstance(candidate, h5py.Dataset):
+            shared.append(candidate)
+    if len(shared) == 1:
+        return shared[0].name
+    same_length = [candidate for candidate in shared if candidate.shape[:1] == dataset.shape[:1]]
+    if len(same_length) == 1:
+        return same_length[0].name
+    if shared:
+        warnings.warn(
+            f"{dataset.name}: cannot tell which of {', '.join(c.name for c in shared)} holds its timestamps; skipped",
+            stacklevel=4,
+        )
+    return None
+
+
+def _qualified_name(parts: dict[str, str]) -> str:
+    return (
+        f"{parts['modality']}_{parts['location']}__"
+        f"{parts['data_type']}__{parts['representation']}__{parts['source']}"
+    )
 
 
 def _is_channelized(parts: dict[str, str]) -> bool:
@@ -415,7 +461,7 @@ def _make_signal(
     archive: str | None,
 ) -> Signal:
     attrs = dataset.attrs
-    label = _attr_str(attrs, "label")
+    label = _attr_str(attrs, "label") or _comma_layout_label(name, timestamps_path)
     parts = _basename_parts(label)
     modality = parts["modality"] if parts else None
     data_type = _attr_str(attrs, "data_type") or (parts["data_type"] if parts else None)
@@ -425,8 +471,7 @@ def _make_signal(
     if kind == "eeg" and dataset.ndim == 1:
         if modality is None:
             modality = "HFEEG" if name.startswith("HFEEG_") else "EEG"
-        prefix = f"{modality}_"
-        channel = name[len(prefix):] if modality != "EEG" and name.startswith(prefix) else name
+        channel = _channel_name(name, modality, parts)
 
     units = _attr_str(attrs, "units")
     sampling_rate = attrs.get("sampling_rate")
@@ -443,12 +488,33 @@ def _make_signal(
         units=None if units in (None, "None", "") else units,
         sampling_rate=None if sampling_rate is None else float(sampling_rate),
         label=label,
-        location=_attr_str(attrs, "location"),
-        source_device=_attr_str(attrs, "source_device"),
+        location=_attr_str(attrs, "location") or (parts["location"] if parts else None),
+        source_device=_attr_str(attrs, "source_device") or (parts["source"] if parts else None),
         data_type=data_type,
-        representation=_attr_str(attrs, "representation"),
+        representation=_attr_str(attrs, "representation") or (parts["representation"] if parts else None),
         archive=archive,
     )
+
+
+def _comma_layout_label(name: str, timestamps_path: str) -> str | None:
+    if _basename_parts(name) is not None:
+        return name
+    timestamps_name = timestamps_path.rsplit("/", 1)[-1]
+    if timestamps_name.endswith(COMMA_TIMESTAMPS_SUFFIX):
+        return timestamps_name[: -len(COMMA_TIMESTAMPS_SUFFIX)]
+    return None
+
+
+def _channel_name(name: str, modality: str, parts: dict[str, str] | None) -> str:
+    prefixes = []
+    if parts is not None:
+        prefixes.append(f"{_qualified_name(parts)}_")
+    if modality != "EEG":
+        prefixes.append(f"{modality}_")
+    for prefix in prefixes:
+        if name.startswith(prefix):
+            return name[len(prefix):]
+    return name
 
 
 def _classify(group_name: str, name: str, modality: str | None, data_type: str | None) -> SignalKind:

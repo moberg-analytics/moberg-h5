@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import moberg_h5
-from conftest import EEG_TIMESTAMPS, T0, eeg_gaps, eeg_regions
+from conftest import EEG_TIMESTAMPS, T0, eeg_gaps, eeg_regions, write_root_attrs
 
 
 def test_lists_every_measurement_and_skips_auxiliary_datasets(v1_path):
@@ -137,3 +137,28 @@ def test_multi_archive_file(multi_path):
         np.testing.assert_array_equal(timestamps, EEG_TIMESTAMPS)
         with pytest.raises(KeyError):
             rec.signals(archive="Patient_C")
+
+
+def test_source_qualified_channels(tmp_path):
+    path = tmp_path / "two_amplifiers.h5"
+    with h5py.File(path, "w") as file:
+        write_root_attrs(file)
+        eeg = file.create_group("EEG")
+        for modality, source in (("EEG", "Amp1020"), ("EEG", "Pytest"), ("HFEEG", "Pytest"), ("HFEEG", "Amp1020")):
+            basename = f"{modality},Composite,SampleSeries,Composite,{source}"
+            qualified = f"{modality}_Composite__SampleSeries__Composite__{source}"
+            eeg.create_dataset(f"{qualified}_Timestamps", data=EEG_TIMESTAMPS)
+            channel = eeg.create_dataset(f"{qualified}_C3", data=np.arange(10.0))
+            channel.attrs["label"] = basename
+            channel.attrs["timestamps"] = f"/EEG/{qualified}_Timestamps"
+
+    with moberg_h5.open(path) as rec:
+        eeg_channels = rec.eeg_channels()
+        hfeeg_channels = rec.eeg_channels("HFEEG")
+
+    assert [(s.name, s.channel, s.source_device) for s in eeg_channels] == [
+        ("EEG_Composite__SampleSeries__Composite__Amp1020_C3", "C3", "Amp1020"),
+        ("EEG_Composite__SampleSeries__Composite__Pytest_C3", "C3", "Pytest"),
+    ]
+    assert [s.channel for s in hfeeg_channels] == ["C3", "C3"]
+    assert hfeeg_channels[0].path == "/EEG/HFEEG_Composite__SampleSeries__Composite__Amp1020_C3"
