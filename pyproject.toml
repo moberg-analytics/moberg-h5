@@ -1,0 +1,30 @@
+[project]
+name = "moberg-h5"
+version = "0.1.0"
+description = "Read HDF5 files exported from Moberg CNS archives"
+readme = "README.md"
+authors = [{ name = "Moberg Analytics", email = "info@moberganalytics.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "h5py>=3.8",
+    "numpy>=1.23",
+]
+
+[project.optional-dependencies]
+pandas = ["pandas>=1.5"]
+
+[dependency-groups]
+dev = [
+    "pandas>=1.5",
+    "pytest>=8",
+]
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/moberg_h5"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
