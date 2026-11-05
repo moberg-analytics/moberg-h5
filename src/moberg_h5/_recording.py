@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 SUPPORTED_MAJOR = 1
 DATA_GROUPS = ("EEG", "Waveforms", "Trends", "Other")
 ANNOTATIONS_GROUP = "Annotations"
-# export-utils 0.0.1 named datasets after the full CNS basename and its timestamps "<basename>,timestamps".
+# Files written before January 2026 name datasets after the full CNS basename, with timestamps in "<basename>,timestamps".
 COMMA_TIMESTAMPS_SUFFIX = ",timestamps"
 AUX_SUFFIXES = ("_Timestamps", "_ContinuousRegions", "_Gaps", "_ColumnNames", COMMA_TIMESTAMPS_SUFFIX)
 EEG_MODALITIES = ("EEG", "HFEEG")
@@ -315,7 +315,7 @@ class Recording:
             if isinstance(dataset, h5py.Dataset):
                 return np.asarray(dataset[()], dtype=np.int64).reshape(-1, 2)
 
-        # Files written before January 2026 stored these arrays as attributes.
+        # Files from early January 2026 stored these arrays as attributes.
         value = self.file[resolved.path].attrs.get(legacy_attr)
         if value is not None and not isinstance(value, (str, bytes)):
             return np.asarray(value, dtype=np.int64).reshape(-1, 2)
@@ -385,7 +385,7 @@ def _legacy_timestamps_path(
     EEG and HFEEG channel datasets share their basename's timestamps. When two
     basenames in a group map to the same name, the writer qualifies both as
     ``<Modality>_<Location>__<Type>__<Representation>__<Source>``. Files from
-    export-utils 0.0.1 name datasets ``<basename>`` with ``<basename>,timestamps``.
+    before January 2026 name datasets ``<basename>`` with ``<basename>,timestamps``.
     """
     if _basename_parts(name) is not None:
         timestamps = group.get(name + COMMA_TIMESTAMPS_SUFFIX)
@@ -411,7 +411,7 @@ def _legacy_timestamps_path(
 
 
 def _comma_layout_channel_timestamps(group: h5py.Group, dataset: h5py.Dataset) -> str | None:
-    """Match an export-utils 0.0.1 EEG channel to its basename's ``,timestamps`` dataset.
+    """Match an EEG channel in a comma-named file to its basename's ``,timestamps`` dataset.
 
     Those files name channels after the electrode only and record no label, so
     with several EEG basenames (EEG and HFEEG, or two amplifiers) the channel is
@@ -527,7 +527,7 @@ def _classify(group_name: str, name: str, modality: str | None, data_type: str |
             return "qeeg"
         if modality is None or modality in EEG_MODALITIES:
             return "eeg"
-    # Legacy files wrote unrouted basenames at the root, and before April 2026
+    # Legacy files wrote unrouted basenames at the root, and before May 2026
     # routed any basename containing "EEG" to the EEG group.
     if group_name != "Other":
         if data_type == "SampleSeries":

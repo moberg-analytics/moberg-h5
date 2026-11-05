@@ -180,9 +180,9 @@ def multi_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def legacy_path(tmp_path: Path) -> Path:
-    """A file shaped like export-utils output between April and August 2026,
-    with older pieces mixed in: per-channel regions (January to April 2026) and
-    region/gap attributes (before January 2026)."""
+    """A file shaped like converter output between May and September 2026,
+    with older pieces mixed in: per-channel regions (January to May 2026) and
+    region/gap attributes (early January 2026)."""
     path = tmp_path / "legacy.h5"
     with h5py.File(path, "w") as file:
         eeg = file.create_group("EEG")
@@ -218,8 +218,8 @@ def _comma_dataset(group: h5py.Group, name: str, data: np.ndarray, units: str | 
 
 @pytest.fixture
 def comma_layout_path(tmp_path: Path) -> Path:
-    """A file shaped like export-utils 0.0.1 output (every build before January 2026),
-    checked against that writer run on a synthetic archive: datasets named after the
+    """A file shaped like converter output from before January 2026, checked against
+    that converter run on a synthetic archive: datasets named after the
     full CNS basename, timestamps in "<basename>,timestamps", EEG channels named after
     the electrode, and only number_points, start_time, end_time and units attributes."""
     path = tmp_path / "comma.h5"

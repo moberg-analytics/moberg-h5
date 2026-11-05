@@ -1,11 +1,18 @@
 # moberg-h5
 
-Read HDF5 files exported from Moberg CNS archives by `export-utils` and the
-Moberg connect client.
+Read the HDF5 files that Moberg's connect-client writes from CNS archives, and
+HDF5 exports from the Moberg Clinical Platform.
 
 The package lists the measurements in a file, finds each one's timestamps, and
 reads a time range without loading the whole dataset. It depends on h5py and
 numpy. pandas is optional and only needed for `read_frame`.
+
+Documentation:
+
+- [HDF5 format](docs/hdf5-format.md): groups, dataset names, timestamps,
+  attributes, regions and gaps, and the layouts written before format versioning.
+- [Format changelog](docs/format-changelog.md): what changed in each
+  `format_version`.
 
 ## Install
 
@@ -73,12 +80,12 @@ group, dataset or attribute is renamed, moved, removed or changes meaning.
 
 | File | Support |
 |---|---|
-| No `format_version` (legacy) | Best effort. Timestamps are found by naming convention, including the comma-named datasets that export-utils 0.0.1 wrote before January 2026; region and gap attributes from older files are read. |
+| No `format_version` (legacy) | Best effort. Timestamps are found by naming convention, including the comma-named datasets written before January 2026; region and gap attributes from older files are read. |
 | `1.x` | Supported |
 | `2.0` and later | Rejected with `UnsupportedFormatVersion`. Install a newer moberg-h5. |
 
-The file layout is documented in the Moberg user manual MCPUM1, "MCP Data
-Organization", section 6 (HDF5 Data Structure).
+The layout is described in [docs/hdf5-format.md](docs/hdf5-format.md) and the
+changes in each version in [docs/format-changelog.md](docs/format-changelog.md).
 
 ## Development
 
