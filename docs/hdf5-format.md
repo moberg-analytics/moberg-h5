@@ -190,6 +190,8 @@ Every measurement dataset in `EEG`, `Waveforms`, `Trends` and `Other` carries th
 
 `sampling_rate` is nominal. Gaps and small timing drift make the actual time between samples vary, so use the timestamps for the time of each sample.
 
+`start_time` and `end_time` can be up to 1 µs later than the first and last timestamps. In legacy files they describe the source measurement, which can hold samples the file does not (Section 13). Use the first and last timestamps for a measurement's exact time range.
+
 ## 10. File attributes
 
 The root of the file carries these attributes. All are strings except `failed_basenames`, which is an array of strings.
@@ -218,7 +220,7 @@ A measurement may have two datasets that describe where the recording has data, 
 | `_ContinuousRegions` | (N, 2) int64 | [first sample time, last sample time] of one run of samples in the CNS index |
 | `_Gaps` | (N, 2) int64 | [time of the last sample before the gap, time of the first sample after it] |
 
-Times are in microseconds since 1970-01-01 UTC, like the timestamps.
+Times are in microseconds since 1970-01-01 UTC, like the timestamps. A region's first and last times can be up to 1 µs later than the matching timestamps.
 
 Continuous regions follow the runs in the archive's index files. A new run can start without a gap, for example at a segment boundary, so two consecutive regions can touch. Use `_Gaps` to find missing data.
 
@@ -304,6 +306,7 @@ with moberg_h5.open(HDF5_PATH) as rec:
     print(rec.format_version, rec.attrs)
     for signal in rec.signals():
         print(signal.path, signal.kind, signal.units, signal.sampling_rate)
+    print(rec.time_range("Waveforms/ICP_na"))  # first sample -> last sample + 1 µs
 
     timestamps_us, icp = rec.read("Waveforms/ICP_na", start, end)
     eeg = rec.read_frame(rec.eeg_channels(), start, end)  # pandas DataFrame, UTC index

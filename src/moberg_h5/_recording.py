@@ -10,7 +10,7 @@ import h5py
 import numpy as np
 
 from moberg_h5._errors import FormatError, UnsupportedFormatVersion
-from moberg_h5._time import TimeLike, to_epoch_us
+from moberg_h5._time import TimeLike, TimeRange, to_epoch_us
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -89,6 +89,7 @@ class Recording:
         self._signals: list[Signal] | None = None
         self._by_path: dict[str, Signal] = {}
         self._warned_lengths: set[str] = set()
+        self._ranges: dict[tuple[str, int], TimeRange] = {}
 
     def __enter__(self) -> Recording:
         return self
@@ -170,7 +171,7 @@ class Recording:
         such as the channels returned by :meth:`eeg_channels`. Needs pandas
         (``pip install "moberg-h5[pandas]"``).
         """
-        pd = _require_pandas()
+        pd = _require_pandas("read_frame")
         refs = [signals] if isinstance(signals, (Signal, str)) else list(signals)
         if not refs:
             raise ValueError("read_frame needs at least one signal")
@@ -199,6 +200,71 @@ class Recording:
                 key = column_name if len(resolved) == 1 else f"{signal.name}:{column_name}"
                 columns[key] = column
         return pd.DataFrame(columns, index=index)
+
+    def time_range(
+        self,
+        signal: SignalRef | None = None,
+        *,
+        kind: SignalKind | None = None,
+        archive: str | None = None,
+    ) -> TimeRange | None:
+        """First and last sample time of a signal, or of every signal matching ``kind`` and ``archive``.
+
+        The result is a ``start <= t < end`` window that :meth:`read` accepts as is:
+        ``rec.read(signal, *rec.time_range(signal))`` returns every row. It comes
+        from the first and last timestamps, not the ``start_time`` and ``end_time``
+        attributes. Returns None when there are no samples. Over several signals
+        the range spans from the earliest first sample to the latest last sample,
+        including any time between archives; :meth:`regions` shows where data is.
+        """
+        if signal is not None:
+            if kind is not None or archive is not None:
+                raise ValueError("pass a signal or the kind and archive filters, not both")
+            return self._extent(self._resolve(signal))[1]
+        ranges = [
+            extent
+            for candidate in self.signals(kind=kind, archive=archive)
+            if (extent := self._extent(candidate)[1]) is not None
+        ]
+        if not ranges:
+            return None
+        return TimeRange(min(r.start_us for r in ranges), max(r.end_us for r in ranges))
+
+    def summary(self, kind: SignalKind | None = None, archive: str | None = None) -> pd.DataFrame:
+        """One row per signal with its time range, row count, nominal sampling rate and gap count.
+
+        ``start`` and ``end`` are UTC timestamps with ``end`` one microsecond after
+        the last sample, so ``rec.read(path, row.start, row.end)`` returns every
+        row; both are NaT for an empty signal. Needs pandas.
+        """
+        pd = _require_pandas("summary")
+        selected = self.signals(kind=kind, archive=archive)
+        starts: list[np.datetime64] = []
+        ends: list[np.datetime64] = []
+        rows: list[int] = []
+        for signal in selected:
+            length, extent = self._extent(signal)
+            rows.append(length)
+            starts.append(np.datetime64("NaT", "us") if extent is None else np.datetime64(extent.start_us, "us"))
+            ends.append(np.datetime64("NaT", "us") if extent is None else np.datetime64(extent.end_us, "us"))
+        start = pd.DatetimeIndex(np.array(starts, dtype="datetime64[us]")).tz_localize("UTC")
+        end = pd.DatetimeIndex(np.array(ends, dtype="datetime64[us]")).tz_localize("UTC")
+        return pd.DataFrame(
+            {
+                "archive": [signal.archive for signal in selected],
+                "kind": [signal.kind for signal in selected],
+                "start": start,
+                "end": end,
+                "duration": end - start,
+                "rows": rows,
+                "sampling_rate": np.array(
+                    [np.nan if signal.sampling_rate is None else signal.sampling_rate for signal in selected],
+                    dtype=np.float64,
+                ),
+                "gaps": [len(self.gaps(signal)) for signal in selected],
+            },
+            index=pd.Index([signal.path for signal in selected], name="path"),
+        )
 
     def regions(
         self,
@@ -295,6 +361,17 @@ class Recording:
                 self._warned_lengths.add(signal.path)
             length = min(length, values_length)
         return length
+
+    def _extent(self, signal: Signal) -> tuple[int, TimeRange | None]:
+        """Rows that :meth:`read` can return for ``signal``, and their time range."""
+        timestamps = self.file[signal.timestamps_path]
+        length = self._common_length([signal], timestamps)
+        if length == 0:
+            return 0, None
+        key = (signal.timestamps_path, length)
+        if key not in self._ranges:
+            self._ranges[key] = TimeRange(int(timestamps[0]), int(timestamps[length - 1]) + 1)
+        return length, self._ranges[key]
 
     def _column_names(self, signal: Signal, count: int) -> list[str]:
         dataset = self.file[signal.path]
@@ -616,9 +693,9 @@ def _attr_str(attrs: h5py.AttributeManager, key: str) -> str | None:
     return decoded if isinstance(decoded, str) else str(decoded)
 
 
-def _require_pandas() -> Any:
+def _require_pandas(caller: str) -> Any:
     try:
         import pandas
     except ImportError:
-        raise ImportError('read_frame needs pandas; install it with: pip install "moberg-h5[pandas]"') from None
+        raise ImportError(f'{caller} needs pandas; install it with: pip install "moberg-h5[pandas]"') from None
     return pandas

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Union
+from typing import NamedTuple, Union
 
 import numpy as np
 
@@ -10,6 +10,42 @@ TimeLike = Union[int, np.integer, np.datetime64, datetime]
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 _ONE_US = timedelta(microseconds=1)
 _TICKS_PER_US = {"ns": 1_000, "ps": 1_000_000, "fs": 1_000_000_000, "as": 1_000_000_000_000}
+
+
+class TimeRange(NamedTuple):
+    """The samples' time span as a ``start <= t < end`` window, in microseconds since the epoch (UTC).
+
+    ``start_us`` is the first sample and ``end_us`` is one microsecond after the
+    last, so ``rec.read(signal, *time_range)`` returns every row. ``start`` and
+    ``end`` give the same bounds as UTC datetimes.
+    """
+
+    start_us: int
+    end_us: int
+
+    @property
+    def last_us(self) -> int:
+        """Time of the last sample."""
+        return self.end_us - 1
+
+    @property
+    def start(self) -> datetime:
+        return _EPOCH + timedelta(microseconds=self.start_us)
+
+    @property
+    def end(self) -> datetime:
+        return _EPOCH + timedelta(microseconds=self.end_us)
+
+    @property
+    def duration(self) -> timedelta:
+        return timedelta(microseconds=self.end_us - self.start_us)
+
+    def __repr__(self) -> str:
+        return f"TimeRange({_iso(self.start)} -> {_iso(self.end)}, {self.duration})"
+
+
+def _iso(value: datetime) -> str:
+    return value.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def to_epoch_us(value: TimeLike) -> int:

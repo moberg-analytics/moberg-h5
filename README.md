@@ -43,6 +43,32 @@ with moberg_h5.open("Patient_2026_Nov_04__10_00_00_000000.h5") as rec:
     gaps = rec.gaps("EEG/C3", start, end)
 ```
 
+## Choosing a time window
+
+`time_range` returns the first sample time and the time 1 µs after the last
+sample, so it can go straight into `read`, which reads `start <= t < end`:
+
+```python
+from datetime import timedelta
+
+with moberg_h5.open(path) as rec:
+    print(rec.time_range())                       # whole file
+    print(rec.summary(kind="trend"))              # one row per signal
+    span = rec.time_range("Trends/ICP_Mean")
+    t, icp = rec.read("Trends/ICP_Mean", *span)   # every row
+    t, icp = rec.read("Trends/ICP_Mean", span.start, span.start + timedelta(minutes=10))
+```
+
+A `TimeRange` unpacks to `(start_us, end_us)` in integer microseconds. `start`
+and `end` give the same bounds as UTC datetimes; `last_us` and `duration` are
+also available. In a file with several archives the whole-file range includes
+the time between archives, so use `archive=`, `summary()` or `regions()` to find
+where there is data.
+
+The range comes from the first and last timestamps. The `start_time` and
+`end_time` dataset attributes can be up to 1 µs late, which can drop the first
+sample when used as `start`.
+
 ## API
 
 | Call | Returns |
@@ -56,6 +82,8 @@ with moberg_h5.open("Patient_2026_Nov_04__10_00_00_000000.h5") as rec:
 | `rec.eeg_channels(modality="EEG")` | Per-channel EEG datasets; pass `"HFEEG"` for high-frequency EEG |
 | `rec.read(signal, start=None, end=None)` | `(timestamps_us, values)` for `start <= t < end` |
 | `rec.read_frame(signals, start=None, end=None)` | pandas DataFrame indexed by UTC time |
+| `rec.time_range(signal=None, kind=None, archive=None)` | `TimeRange` from the first sample to 1 µs after the last, for one signal or all matching signals; `None` without samples |
+| `rec.summary(kind=None, archive=None)` | pandas DataFrame, one row per signal: archive, kind, start, end, duration, rows, sampling rate, gap count |
 | `rec.regions(signal)`, `rec.gaps(signal)` | int64 `(n, 2)` arrays of microsecond times |
 | `rec.annotations()` | `Annotation` list with microsecond start and end times |
 
