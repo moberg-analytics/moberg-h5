@@ -5,6 +5,8 @@ Package releases of moberg-h5. Changes to the HDF5 file layout itself are in
 
 ## Unreleased
 
+## 0.1.0 - 2026-11-18
+
 First release.
 
 - `moberg_h5.open` reads connect-client HDF5 files and Moberg Clinical Platform
@@ -15,3 +17,6 @@ First release.
   the whole dataset. `read_frame` needs the `pandas` extra.
 - `Recording.regions`, `Recording.gaps` and `Recording.annotations` return
   microsecond times.
+- `Recording.time_range` returns when a signal, or a set of signals, has data,
+  ready to pass to `read`. `Recording.summary` lists each signal's range, rows,
+  sampling rate and gap count as a DataFrame.
