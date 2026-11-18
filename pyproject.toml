@@ -32,7 +32,7 @@ pandas = ["pandas>=1.5"]
 
 [dependency-groups]
 dev = [
-    "ipython-icat>=0.5.0",
+    "ipython-icat>=0.5.1 ; python_full_version >= '3.11'",
     "pandas>=1.5",
     "pytest>=8",
     "ruff>=0.17.5",
@@ -48,6 +48,10 @@ exclude = [".agents", ".claude", ".github"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/moberg_h5"]
+
+[tool.uv]
+# ipython-icat 0.5.1 is newer than the 2-day cooldown; remove after 2026-11-21.
+exclude-newer-package = { ipython-icat = "2026-11-18T22:00:00Z" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
