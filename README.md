@@ -9,17 +9,17 @@ numpy. pandas is optional and only needed for `read_frame`.
 
 Documentation:
 
-- [HDF5 format](docs/hdf5-format.md): groups, dataset names, timestamps,
+- [HDF5 format](https://github.com/moberg-analytics/moberg-h5/blob/main/docs/hdf5-format.md): groups, dataset names, timestamps,
   attributes, regions and gaps, and the layouts written before format versioning.
-- [Format changelog](docs/format-changelog.md): what changed in each
+- [Format changelog](https://github.com/moberg-analytics/moberg-h5/blob/main/docs/format-changelog.md): what changed in each
   `format_version`.
 
 ## Install
 
 ```sh
-pip install "moberg-h5 @ git+https://github.com/moberg-analytics/moberg-h5"
+pip install moberg-h5
 # with pandas support
-pip install "moberg-h5[pandas] @ git+https://github.com/moberg-analytics/moberg-h5"
+pip install "moberg-h5[pandas]"
 ```
 
 Python 3.10 or newer.
@@ -84,11 +84,22 @@ group, dataset or attribute is renamed, moved, removed or changes meaning.
 | `1.x` | Supported |
 | `2.0` and later | Rejected with `UnsupportedFormatVersion`. Install a newer moberg-h5. |
 
-The layout is described in [docs/hdf5-format.md](docs/hdf5-format.md) and the
-changes in each version in [docs/format-changelog.md](docs/format-changelog.md).
+The layout is described in
+[docs/hdf5-format.md](https://github.com/moberg-analytics/moberg-h5/blob/main/docs/hdf5-format.md)
+and the changes in each version in
+[docs/format-changelog.md](https://github.com/moberg-analytics/moberg-h5/blob/main/docs/format-changelog.md).
 
 ## Development
 
 ```sh
 uv run pytest
 ```
+
+Package releases are listed in
+[CHANGELOG.md](https://github.com/moberg-analytics/moberg-h5/blob/main/CHANGELOG.md).
+Pushing a `vX.Y.Z` tag publishes to PyPI after a maintainer approves the
+deployment; `.agents/skills/release/SKILL.md` has the steps.
+
+## License
+
+MIT. See [LICENSE](https://github.com/moberg-analytics/moberg-h5/blob/main/LICENSE).
