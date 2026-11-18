@@ -35,7 +35,8 @@ class Signal:
     """One measurement dataset and the metadata needed to read it.
 
     ``path`` is the absolute HDF5 path of the values and ``timestamps_path`` the
-    dataset holding their timestamps. ``modality`` and ``channel`` come from the CNS
+    dataset holding their timestamps: the dataset's ``timestamps`` attribute in
+    format 1.x, inferred from dataset names in legacy files. ``modality`` and ``channel`` come from the CNS
     basename in ``label``: for ``/EEG/HFEEG_C3`` the modality is ``HFEEG`` and the
     channel ``C3``, and the channel of a source-qualified dataset such as
     ``/EEG/EEG_Composite__SampleSeries__Composite__Amp1020_C3`` is also ``C3``.
@@ -271,7 +272,10 @@ class Recording:
         start: TimeLike | None = None,
         end: TimeLike | None = None,
     ) -> np.ndarray:
-        """Continuous regions as an int64 ``(n, 2)`` array of ``[first_us, last_us]`` rows."""
+        """Continuous regions as an int64 ``(n, 2)`` array of ``[first_us, last_us]`` rows.
+
+        ``start`` and ``end`` select the regions that overlap them; returned ends are not trimmed.
+        """
         return _overlapping(self._auxiliary(signal, "_ContinuousRegions", "continuous_regions"), start, end)
 
     def gaps(
@@ -280,7 +284,10 @@ class Recording:
         start: TimeLike | None = None,
         end: TimeLike | None = None,
     ) -> np.ndarray:
-        """Gaps as an int64 ``(n, 2)`` array of ``[last_us_before, first_us_after]`` rows."""
+        """Gaps as an int64 ``(n, 2)`` array of ``[last_us_before, first_us_after]`` rows.
+
+        ``start`` and ``end`` select the gaps that overlap them; returned ends are not trimmed.
+        """
         return _overlapping(self._auxiliary(signal, "_Gaps", "gaps"), start, end)
 
     def annotations(self, archive: str | None = None) -> list[Annotation]:
@@ -398,8 +405,8 @@ class Recording:
 def open(path: str | os.PathLike[str]) -> Recording:
     """Open a Moberg HDF5 file for reading.
 
-    Raises :class:`UnsupportedFormatVersion` when the file's major format version
-    is newer than this reader understands.
+    Raises :class:`UnsupportedFormatVersion` when ``format_version`` is not in
+    ``MAJOR.MINOR`` form or its major version is not one this reader supports.
     """
     file = h5py.File(path, "r")
     try:

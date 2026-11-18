@@ -18,7 +18,7 @@ First versioned format, written by connect-client releases from November 2026. C
 
 - File attributes on the root: `format_version`, `converter_name`, `converter_version`, `export_utils_version`, `cns_utils_version`, `source_archive` and `created_utc`. In a file that holds several archives, `source_archive` is set on each `/Patient_*` group.
 - `failed_basenames` file attribute. When some measurements fail to convert, connect-client now keeps the file with the measurements that did convert and lists the failed ones here. Before, any failed measurement meant no file for that patient.
-- `timestamps` attribute on every measurement dataset: the absolute path of its timestamps dataset.
+- `timestamps` attribute on every measurement dataset: the absolute path of its timestamps dataset. moberg-h5 exposes it as `Signal.timestamps_path`.
 - `sampling_rate` attribute (nominal Hz) on `SampleSeries` measurement datasets: EEG and HFEEG channels, waveforms and qEEG. Left out when the rate changes during the recording.
 
 ### Changed
@@ -28,7 +28,7 @@ First versioned format, written by connect-client releases from November 2026. C
 - Two EEG (or HFEEG) measurements from different sources in one archive now get separate channel datasets prefixed with the full measurement name, such as `EEG/EEG_Composite__SampleSeries__Composite__Amp1020_C3`. Before, both sources wrote into the same channel datasets and their rows were mixed.
 - `_Gaps` datasets now include gaps between segments of a segmented archive. Before, they listed only gaps inside a segment.
 - Samples recorded just past the start of the next segment are no longer dropped, and continuous regions no longer extend past the data in the file.
-- A 2-D qEEG measurement whose columns change during the recording is no longer written. The converter reports the change and lists the measurement in `failed_basenames`.
+- A 2-D qEEG measurement whose columns change during the recording is no longer written. The converter reports the change; connect-client lists the measurement in `failed_basenames`.
 
 ### Unchanged
 

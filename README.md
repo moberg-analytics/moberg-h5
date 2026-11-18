@@ -74,17 +74,17 @@ sample when used as `start`.
 | Call | Returns |
 |---|---|
 | `moberg_h5.open(path)` | `Recording`, usable as a context manager |
-| `rec.format_version` | `"1.0"`, or `None` for files written before format versioning |
+| `rec.format_version` | The file's `"1.x"` version string, or `None` for files written before format versioning |
 | `rec.attrs` | Root attributes: converter name and version, source archive, creation time |
 | `rec.archives` | `Patient_*` group names in a file that holds several archives |
 | `rec.signals(kind=None, archive=None)` | `Signal` list; kinds are `eeg`, `qeeg`, `waveform`, `trend`, `other` |
 | `rec.signal(path)` | One `Signal` by HDF5 path |
-| `rec.eeg_channels(modality="EEG")` | Per-channel EEG datasets; pass `"HFEEG"` for high-frequency EEG |
+| `rec.eeg_channels(modality="EEG", archive=None)` | Per-channel EEG datasets; pass `"HFEEG"` for high-frequency EEG |
 | `rec.read(signal, start=None, end=None)` | `(timestamps_us, values)` for `start <= t < end` |
-| `rec.read_frame(signals, start=None, end=None)` | pandas DataFrame indexed by UTC time |
+| `rec.read_frame(signals, start=None, end=None)` | pandas DataFrame indexed by UTC time; the signals must share one timestamps dataset |
 | `rec.time_range(signal=None, kind=None, archive=None)` | `TimeRange` from the first sample to 1 µs after the last, for one signal or all matching signals; `None` without samples |
 | `rec.summary(kind=None, archive=None)` | pandas DataFrame, one row per signal: archive, kind, start, end, duration, rows, sampling rate, gap count |
-| `rec.regions(signal)`, `rec.gaps(signal)` | int64 `(n, 2)` arrays of microsecond times |
+| `rec.regions(signal, start=None, end=None)`, `rec.gaps(signal, start=None, end=None)` | int64 `(n, 2)` arrays of microsecond times; `start`/`end` select the intervals that overlap them, without trimming their ends |
 | `rec.annotations()` | `Annotation` list with microsecond start and end times |
 
 Times passed to `read`, `read_frame`, `regions` and `gaps` can be integer
@@ -92,10 +92,18 @@ microseconds since the Unix epoch, `datetime` (naive values are read as UTC),
 `numpy.datetime64` or `pandas.Timestamp`. Timestamps come back as int64
 microseconds since the Unix epoch, UTC.
 
-A `Signal` carries the dataset path, its timestamps path, `units`,
+A `Signal` carries the dataset path, its timestamps path as `timestamps_path`, `units`,
 `sampling_rate` (Hz, format 1.x only), the CNS `label`, `location`,
 `source_device`, `data_type` and `representation`, and for EEG the `modality`
 and `channel`.
+
+In the file, each dataset's `timestamps` attribute holds the path of its
+timestamps dataset; moberg-h5 exposes that path as `Signal.timestamps_path`.
+`Signal` has no `timestamps` field: `rec.read` returns the timestamp values.
+
+`read_frame` puts several signals in one frame only when they share a
+timestamps dataset, such as one archive's EEG channels. In a file with several
+archives, pick one with `rec.eeg_channels(archive=rec.archives[0])`.
 
 EEG channels that were not recorded for part of a session (a montage change)
 hold NaN for those rows, so every channel lines up with the shared timestamps.

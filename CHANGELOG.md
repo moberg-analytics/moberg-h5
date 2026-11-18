@@ -5,6 +5,14 @@ Package releases of moberg-h5. Changes to the HDF5 file layout itself are in
 
 ## Unreleased
 
+- Docs: the HDF5 `timestamps` attribute is exposed as `Signal.timestamps_path`;
+  `read_frame` needs signals that share one timestamps dataset; `regions` and
+  `gaps` select overlapping intervals without trimming them; legacy layouts are
+  read best effort.
+- Docs: corrected the HDF5 format guide. `sampling_rate` can be absent,
+  annotation text is ASCII, multi-archive exports carry no `failed_basenames`,
+  and `format_version` can be any `1.x`.
+
 ## 0.1.0 - 2026-11-18
 
 First release.

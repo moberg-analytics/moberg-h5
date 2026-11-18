@@ -73,7 +73,7 @@ Some exports put several archives in one file. Each archive then sits under a gr
 
 Timestamps are 1-D `int64` datasets that count microseconds since 1970-01-01 00:00:00 UTC. A timestamps dataset has one row for each row of the data it describes, in ascending order. The values stay exact as double-precision floats through the year 2255, so MATLAB and R users can convert them to `double` without losing precision.
 
-To find a dataset's timestamps, read its `timestamps` attribute instead of building the name yourself. The attribute holds an absolute path, for example `/EEG/EEG_Composite_Timestamps`. Several datasets can share one timestamps dataset; all channels of one EEG measurement do.
+To find a dataset's timestamps, read its `timestamps` attribute instead of building the name yourself. The attribute holds an absolute path, for example `/EEG/EEG_Composite_Timestamps`. Several datasets can share one timestamps dataset; all channels of one EEG measurement do. moberg-h5 exposes the attribute's value as `Signal.timestamps_path`.
 
 Example values:
 
@@ -85,7 +85,7 @@ Example values:
 
 ## 4. EEG and HFEEG
 
-Raw EEG is stored as one dataset per channel and one timestamps dataset per EEG measurement. EEG channels use their lead names, such as `EEG/C3`, and share `EEG/EEG_Composite_Timestamps`. HFEEG (high-frequency EEG) channels are in the same group with an `HFEEG_` prefix, such as `EEG/HFEEG_C3`, and share `EEG/HFEEG_Composite_Timestamps`. Each channel dataset has a `sampling_rate` attribute with the nominal rate in Hz.
+Raw EEG is stored as one dataset per channel and one timestamps dataset per EEG measurement. EEG channels use their lead names, such as `EEG/C3`, and share `EEG/EEG_Composite_Timestamps`. HFEEG (high-frequency EEG) channels are in the same group with an `HFEEG_` prefix, such as `EEG/HFEEG_C3`, and share `EEG/HFEEG_Composite_Timestamps`. Each channel dataset can have a `sampling_rate` attribute with the nominal rate in Hz; Section 9 says when it is left out.
 
 If an archive holds two EEG measurements of the same modality from different sources, for example two amplifiers, each one's channels are prefixed with its full measurement name (Section 2), such as `EEG/EEG_Composite__SampleSeries__Composite__Amp1020_C3`, so the two sources never share a channel dataset. The same applies to HFEEG: `EEG/HFEEG_Composite__SampleSeries__Composite__Amp1020_C3`. Read the `timestamps` attribute to find each source's timestamps.
 
@@ -108,7 +108,7 @@ Quantitative EEG (qEEG) metrics computed by MCP are stored as one dataset per me
 - A metric with one value per time point (representation `Float`, such as ADR) is a 1-D dataset.
 - A metric with several values per time point (representation `CompositeFloat`, such as DSA) is a 2-D dataset whose columns depend on the metric. A `qEEG_<Metric>_<Location>_ColumnNames` dataset lists the column labels as strings, and the data dataset's `column_names_dataset` attribute holds its path.
 
-If the columns of a 2-D qEEG measurement change during the recording, the converter does not write it. It reports an error that names the measurement and the change, and lists the measurement in `failed_basenames` (Section 10).
+If the columns of a 2-D qEEG measurement change during the recording, the converter does not write it. It reports an error that names the measurement and the change. connect-client then lists the measurement in `failed_basenames` (Section 10); an export of several archives in one file leaves out that whole archive instead.
 
 ### Density Spectral Array (DSA)
 
@@ -123,7 +123,7 @@ The DSA is the short-time Fourier transform of the EEG, aggregated into 8-second
 
 ## 6. Waveforms and trends
 
-`Waveforms` holds high-frequency signals and `Trends` holds low-frequency values. For example, diastolic, systolic and mean arterial blood pressure are trends, while the arterial blood pressure waveform is in `Waveforms`. Each variable has a data dataset and a timestamps dataset, plus the region and gap datasets in Section 11. Waveform datasets have a `sampling_rate` attribute; trend datasets do not. Use the timestamps for the time of each trend value.
+`Waveforms` holds high-frequency signals and `Trends` holds low-frequency values. For example, diastolic, systolic and mean arterial blood pressure are trends, while the arterial blood pressure waveform is in `Waveforms`. Each variable has a data dataset and a timestamps dataset, plus the region and gap datasets in Section 11. Waveform datasets can have a `sampling_rate` attribute under the rules in Section 9; trend datasets do not. Use the timestamps for the time of each trend value.
 
 Dataset names come from the label the monitoring device reports, so the same variable can have different names on different devices. Temperature from an IntelliVue monitor is `Temp_na`, but from a GE Solar monitor it is `T1_na`. Blood pressure from a non-invasive cuff is `NBP_Mean`, but from an arterial line it is `ART_Mean`. The appendix lists common names. Which ones a file contains depends on the devices and their configuration during monitoring.
 
@@ -147,7 +147,7 @@ Files without a `format_version` put these datasets at the root of the file (Sec
 
 Files exported from MCP can include annotations made in MCP. connect-client does not write annotations.
 
-Annotations are one dataset under the `Annotations` group, named after the export time, for example `Annotations/Annotations-12-21-2021 16:53:05`. The dataset is a 2-D array of fixed-length byte strings (1000 bytes each, UTF-8). Each row is one annotation, or one annotation and measurement pair when an annotation applies to several measurements:
+Annotations are one dataset under the `Annotations` group, named after the export time, for example `Annotations/Annotations-12-21-2021 16:53:05`. The dataset is a 2-D array of fixed-length byte strings (`S1000`, at most 1000 bytes per cell) holding ASCII text. Each row is one annotation, or one annotation and measurement pair when an annotation applies to several measurements:
 
 | Column | Contents |
 |---|---|
@@ -209,7 +209,7 @@ The root of the file carries these attributes. All are strings except `failed_ba
 
 When connect-client cannot convert a measurement, it removes that measurement's datasets, keeps the rest of the file, and lists the measurement in `failed_basenames`. The conversion log and summary give the reason for each. A patient whose measurements all fail gets no file. If `failed_basenames` is absent, no measurement failed. Include the version attributes when you report a problem with a file.
 
-In a file that holds several archives, `source_archive` and `failed_basenames` are set on each `/Patient_*` group instead of the root.
+In a file that holds several archives, `source_archive` is set on each `/Patient_*` group instead of the root. Those exports keep only whole archives: if any measurement in an archive fails, the archive is left out of the file, so they carry no `failed_basenames`.
 
 ## 11. Continuous regions and gaps
 
@@ -241,7 +241,7 @@ The current version is 1.0.
 
 ## 13. Legacy layouts
 
-Files without a `format_version` attribute are legacy files, written before format 1.0. Their layout depends on the converter version that wrote them. The dates below are approximate and say when Moberg's builds changed; a site running an older connect-client keeps writing the older layout. moberg-h5 reads all of them.
+Files without a `format_version` attribute are legacy files, written before format 1.0. Their layout depends on the converter version that wrote them. The dates below are approximate and say when Moberg's builds changed; a site running an older connect-client keeps writing the older layout. moberg-h5 reads them on a best-effort basis: when it cannot tell which timestamps belong to an EEG channel it skips the channel with a warning, and when a dataset and its timestamps differ in length it reads the shorter length with a warning.
 
 | How to recognize the file | Written | Layout |
 |---|---|---|
