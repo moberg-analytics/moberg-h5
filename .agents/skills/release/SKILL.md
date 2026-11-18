@@ -98,7 +98,9 @@ failed tag stays as a record and is never moved or reused.
 After Tony approves, the run finishes `success`. Done when:
 
 - `https://pypi.org/pypi/moberg-h5/X.Y.Z/json` returns 200;
-- `uv run --isolated --no-project --refresh-package moberg-h5 --with moberg-h5==X.Y.Z python -c 'import moberg_h5; print(moberg_h5.__version__)'` prints `X.Y.Z`;
+- `uv run --no-config --python 3.12 --isolated --no-project --refresh-package moberg-h5 --with moberg-h5==X.Y.Z python -c 'import moberg_h5; print(moberg_h5.__version__)'`
+  prints `X.Y.Z`. `--no-config` skips the user config's 2-day `exclude-newer`,
+  which hides a version uploaded minutes ago;
 - `gh release view vX.Y.Z -R moberg-analytics/moberg-h5` shows the wheel and
   sdist.
 
