@@ -7,10 +7,10 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytest
+from conftest import EEG_TIMESTAMPS, T0
 
 import moberg_h5
 from moberg_h5 import TimeRange
-from conftest import EEG_TIMESTAMPS, T0
 
 TS = EEG_TIMESTAMPS
 

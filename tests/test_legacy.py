@@ -3,9 +3,9 @@ from __future__ import annotations
 import h5py
 import numpy as np
 import pytest
+from conftest import EEG_TIMESTAMPS, T0, eeg_gaps, eeg_regions
 
 import moberg_h5
-from conftest import EEG_TIMESTAMPS, T0, eeg_gaps, eeg_regions
 
 
 def test_legacy_signals_and_kinds(legacy_path):

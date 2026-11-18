@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import h5py
 import pytest
+from conftest import write_root_attrs, write_v1_archive
 
 import moberg_h5
-from conftest import write_root_attrs, write_v1_archive
 
 
 def _write(path, version):

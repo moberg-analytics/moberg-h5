@@ -3,9 +3,9 @@ from __future__ import annotations
 import h5py
 import numpy as np
 import pytest
+from conftest import EEG_TIMESTAMPS, T0, eeg_gaps, eeg_regions, write_root_attrs
 
 import moberg_h5
-from conftest import EEG_TIMESTAMPS, T0, eeg_gaps, eeg_regions, write_root_attrs
 
 
 def test_lists_every_measurement_and_skips_auxiliary_datasets(v1_path):

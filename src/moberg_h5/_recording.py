@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 import re
 import warnings
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable, Literal, Sequence, Union
+from typing import TYPE_CHECKING, Any, Literal, Union
 
 import h5py
 import numpy as np
@@ -399,7 +400,7 @@ class Recording:
         return np.empty((0, 2), dtype=np.int64)
 
 
-def open(path: str | os.PathLike[str]) -> Recording:  # noqa: A001
+def open(path: str | os.PathLike[str]) -> Recording:
     """Open a Moberg HDF5 file for reading.
 
     Raises :class:`UnsupportedFormatVersion` when the file's major format version

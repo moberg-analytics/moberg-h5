@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 import pytest
+from conftest import EEG_TIMESTAMPS, FP1_FIRST_ROW, GAP_AFTER, fp1_values
 
 import moberg_h5
 from moberg_h5._recording import _slice_bounds
-from conftest import EEG_TIMESTAMPS, FP1_FIRST_ROW, GAP_AFTER, fp1_values
 
 TS = EEG_TIMESTAMPS
 
@@ -17,14 +17,14 @@ TS = EEG_TIMESTAMPS
 @pytest.mark.parametrize(
     ("start", "end", "rows"),
     [
-        (None, None, range(0, 10)),
+        (None, None, range(10)),
         (TS[3], None, range(3, 10)),
         (TS[3] + 1, None, range(4, 10)),
         (TS[3] - 1, None, range(3, 10)),
-        (None, TS[7], range(0, 7)),
-        (None, TS[7] + 1, range(0, 8)),
+        (None, TS[7], range(7)),
+        (None, TS[7] + 1, range(8)),
         (TS[2], TS[5], range(2, 5)),
-        (TS[0] - 10_000_000, TS[-1] + 10_000_000, range(0, 10)),
+        (TS[0] - 10_000_000, TS[-1] + 10_000_000, range(10)),
         (TS[GAP_AFTER] + 1, None, range(GAP_AFTER + 1, 10)),
         (TS[GAP_AFTER] + 1, TS[GAP_AFTER + 1], range(0)),
         (TS[4], TS[4], range(0)),
@@ -68,9 +68,8 @@ def test_time_types_are_equivalent(v1_path):
 
 
 def test_rejects_float_times(v1_path):
-    with moberg_h5.open(v1_path) as rec:
-        with pytest.raises(TypeError):
-            rec.read("EEG/C3", float(TS[2]))
+    with moberg_h5.open(v1_path) as rec, pytest.raises(TypeError):
+        rec.read("EEG/C3", float(TS[2]))
 
 
 def test_nan_rows_for_channel_absent_from_early_segments(v1_path):

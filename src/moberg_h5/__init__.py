@@ -3,7 +3,14 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from moberg_h5._errors import FormatError, MobergH5Error, UnsupportedFormatVersion
-from moberg_h5._recording import SUPPORTED_MAJOR, Annotation, Recording, Signal, SignalKind, open
+from moberg_h5._recording import (
+    SUPPORTED_MAJOR,
+    Annotation,
+    Recording,
+    Signal,
+    SignalKind,
+    open,
+)
 from moberg_h5._time import TimeRange
 
 try:
