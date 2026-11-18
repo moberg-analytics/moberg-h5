@@ -146,8 +146,14 @@ def test_read_frame_without_pandas(v1_path, monkeypatch):
     "make_bounds",
     [
         lambda start_ns, end_ns: (np.datetime64(start_ns, "ns"), np.datetime64(end_ns, "ns")),
-        lambda start_ns, end_ns: (pd.Timestamp(start_ns, unit="ns", tz="UTC"), pd.Timestamp(end_ns, unit="ns", tz="UTC")),
-        lambda start_ns, end_ns: (pd.Timestamp(start_ns, unit="ns"), pd.Timestamp(end_ns, unit="ns").tz_localize("UTC").tz_convert("US/Eastern")),
+        lambda start_ns, end_ns: (
+            pd.Timestamp(start_ns, unit="ns", tz="UTC"),
+            pd.Timestamp(end_ns, unit="ns", tz="UTC"),
+        ),
+        lambda start_ns, end_ns: (
+            pd.Timestamp(start_ns, unit="ns"),
+            pd.Timestamp(end_ns, unit="ns").tz_localize("UTC").tz_convert("US/Eastern"),
+        ),
         # numpy's stubs do not accept multiplied units such as "10ns".
         lambda start_ns, end_ns: (np.datetime64(start_ns // 10, "10ns"), np.datetime64(end_ns // 10, "10ns")),  # ty: ignore[no-matching-overload]
     ],

@@ -180,10 +180,7 @@ class Recording:
         resolved = [self._resolve(ref) for ref in refs]
         timestamp_paths = sorted({signal.timestamps_path for signal in resolved})
         if len(timestamp_paths) > 1:
-            raise ValueError(
-                "signals in one frame must share a timestamps dataset; got "
-                + ", ".join(timestamp_paths)
-            )
+            raise ValueError("signals in one frame must share a timestamps dataset; got " + ", ".join(timestamp_paths))
 
         timestamps = self.file[timestamp_paths[0]]
         length = self._common_length(resolved, timestamps)
@@ -352,10 +349,7 @@ class Recording:
             values_length = self.file[signal.path].shape[0]
             if values_length == length:
                 continue
-            message = (
-                f"{signal.path} has {values_length} rows but {signal.timestamps_path} has "
-                f"{timestamps.shape[0]}"
-            )
+            message = f"{signal.path} has {values_length} rows but {signal.timestamps_path} has {timestamps.shape[0]}"
             if self.format_version is not None:
                 raise FormatError(message)
             if signal.path not in self._warned_lengths:
@@ -439,9 +433,7 @@ def _check_format_version(file: h5py.File) -> str | None:
 def _find_archives(file: h5py.File) -> list[str]:
     if any(name in file for name in DATA_GROUPS):
         return []
-    return sorted(
-        name for name in file if name.startswith("Patient_") and isinstance(file.get(name), h5py.Group)
-    )
+    return sorted(name for name in file if name.startswith("Patient_") and isinstance(file.get(name), h5py.Group))
 
 
 def _basename_parts(label: str | None) -> dict[str, str] | None:
@@ -519,8 +511,7 @@ def _comma_layout_channel_timestamps(group: h5py.Group, dataset: h5py.Dataset) -
 
 def _qualified_name(parts: dict[str, str]) -> str:
     return (
-        f"{parts['modality']}_{parts['location']}__"
-        f"{parts['data_type']}__{parts['representation']}__{parts['source']}"
+        f"{parts['modality']}_{parts['location']}__{parts['data_type']}__{parts['representation']}__{parts['source']}"
     )
 
 
@@ -592,7 +583,7 @@ def _channel_name(name: str, modality: str, parts: dict[str, str] | None) -> str
         prefixes.append(f"{modality}_")
     for prefix in prefixes:
         if name.startswith(prefix):
-            return name[len(prefix):]
+            return name[len(prefix) :]
     return name
 
 

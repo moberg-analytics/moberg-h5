@@ -83,7 +83,9 @@ def write_v1_archive(root: h5py.Group, prefix: str = "") -> None:
     dsa_ts = T0 + np.arange(3, dtype=np.int64) * 8_000_000
     _dataset(eeg, "qEEG_DSA_Left_Timestamps", dsa_ts)
     string_type = h5py.string_dtype(encoding="utf-8")
-    eeg.create_dataset("qEEG_DSA_Left_ColumnNames", data=np.array(["0.25", "0.75", "1.25", "1.75"], dtype=object), dtype=string_type)
+    eeg.create_dataset(
+        "qEEG_DSA_Left_ColumnNames", data=np.array(["0.25", "0.75", "1.25", "1.75"], dtype=object), dtype=string_type
+    )
     _dataset(
         eeg,
         "qEEG_DSA_Left",
@@ -105,7 +107,11 @@ def write_v1_archive(root: h5py.Group, prefix: str = "") -> None:
         waves,
         "ABP_na",
         np.linspace(80, 120, 50),
-        {**_meta("ABP,na,SampleSeries,Float,IntelliVue", units="mmHg"), "sampling_rate": 125.0, "timestamps": f"{prefix}/Waveforms/ABP_na_Timestamps"},
+        {
+            **_meta("ABP,na,SampleSeries,Float,IntelliVue", units="mmHg"),
+            "sampling_rate": 125.0,
+            "timestamps": f"{prefix}/Waveforms/ABP_na_Timestamps",
+        },
     )
 
     trends = root.create_group("Trends")
@@ -124,7 +130,10 @@ def write_v1_archive(root: h5py.Group, prefix: str = "") -> None:
             trends,
             name,
             np.full(5, 10.0 if source == "IntelliVue" else 12.0),
-            {**_meta(f"ICP,Mean,Numeric,Float,{source}", units="mmHg"), "timestamps": f"{prefix}/Trends/{name}_Timestamps"},
+            {
+                **_meta(f"ICP,Mean,Numeric,Float,{source}", units="mmHg"),
+                "timestamps": f"{prefix}/Trends/{name}_Timestamps",
+            },
         )
 
     other = root.create_group("Other")
@@ -146,7 +155,9 @@ def write_v1_archive(root: h5py.Group, prefix: str = "") -> None:
     annotations.create_dataset("Annotations-11-04-2026 12:00:00", data=rows)
 
 
-def write_root_attrs(file: h5py.File, version: str | bytes = "1.0", source_archive: str | None = "Patient_2026_Nov_04__10_00_00_000000") -> None:
+def write_root_attrs(
+    file: h5py.File, version: str | bytes = "1.0", source_archive: str | None = "Patient_2026_Nov_04__10_00_00_000000"
+) -> None:
     file.attrs["format_version"] = version
     file.attrs["converter_name"] = "connect-client"
     file.attrs["converter_version"] = "3.2.0"
@@ -196,14 +207,23 @@ def legacy_path(tmp_path: Path) -> Path:
 
         waves = file.create_group("Waveforms")
         _dataset(waves, "ECG_II_Timestamps", EEG_TIMESTAMPS)
-        ecg = _dataset(waves, "ECG_II", np.linspace(0, 1, 10), _meta("ECG,II,SampleSeries,Float,IntelliVue", units="mV"))
+        ecg = _dataset(
+            waves, "ECG_II", np.linspace(0, 1, 10), _meta("ECG,II,SampleSeries,Float,IntelliVue", units="mV")
+        )
         ecg.attrs["continuous_regions"] = eeg_regions()
         ecg.attrs["gaps"] = eeg_gaps()
 
         _dataset(file, "PbtO2_na_Timestamps", EEG_TIMESTAMPS[:4])
-        _dataset(file, "PbtO2_na", np.array([20, 21, 22, 23], dtype=np.float32), _meta("PbtO2,na,SparseNumeric,Float,Licox", units="mmHg"))
+        _dataset(
+            file,
+            "PbtO2_na",
+            np.array([20, 21, 22, 23], dtype=np.float32),
+            _meta("PbtO2,na,SparseNumeric,Float,Licox", units="mmHg"),
+        )
         _dataset(file, "TCD_Left_Timestamps", EEG_TIMESTAMPS[:3])
-        _dataset(file, "TCD_Left", np.array([1, 2, 3], dtype=np.float32), _meta("TCD,Left,SBI,Float,Multigon", units="cm/s"))
+        _dataset(
+            file, "TCD_Left", np.array([1, 2, 3], dtype=np.float32), _meta("TCD,Left,SBI,Float,Multigon", units="cm/s")
+        )
     return path
 
 
@@ -230,7 +250,9 @@ def comma_layout_path(tmp_path: Path) -> Path:
         _comma_dataset(eeg, "EEG,Composite,SampleSeries,Composite,Pytest,timestamps", EEG_TIMESTAMPS)
 
         waves = file.create_group("Waveforms")
-        _comma_dataset(waves, "ABP,na,SampleSeries,Float,Pytest", np.linspace(80, 120, 10).astype(np.float32), units="mmHg")
+        _comma_dataset(
+            waves, "ABP,na,SampleSeries,Float,Pytest", np.linspace(80, 120, 10).astype(np.float32), units="mmHg"
+        )
         _comma_dataset(waves, "ABP,na,SampleSeries,Float,Pytest,timestamps", EEG_TIMESTAMPS)
 
         trends = file.create_group("Trends")

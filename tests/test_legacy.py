@@ -106,7 +106,9 @@ def test_v1_length_mismatch_raises(v1_path):
 def test_comma_layout_signals(comma_layout_path):
     with moberg_h5.open(comma_layout_path) as rec:
         found = {signal.path: signal for signal in rec.signals()}
-        abp_ts, abp = rec.read("Waveforms/ABP,na,SampleSeries,Float,Pytest", int(EEG_TIMESTAMPS[2]), int(EEG_TIMESTAMPS[4]))
+        abp_ts, abp = rec.read(
+            "Waveforms/ABP,na,SampleSeries,Float,Pytest", int(EEG_TIMESTAMPS[2]), int(EEG_TIMESTAMPS[4])
+        )
 
     assert sorted(found) == [
         "/EEG/C3",
@@ -119,7 +121,12 @@ def test_comma_layout_signals(comma_layout_path):
     ]
     c3 = found["/EEG/C3"]
     assert c3.timestamps_path == "/EEG/EEG,Composite,SampleSeries,Composite,Pytest,timestamps"
-    assert (c3.kind, c3.modality, c3.channel, c3.label) == ("eeg", "EEG", "C3", "EEG,Composite,SampleSeries,Composite,Pytest")
+    assert (c3.kind, c3.modality, c3.channel, c3.label) == (
+        "eeg",
+        "EEG",
+        "C3",
+        "EEG,Composite,SampleSeries,Composite,Pytest",
+    )
     assert c3.units == "uV"
 
     abp_signal = found["/Waveforms/ABP,na,SampleSeries,Float,Pytest"]
@@ -135,7 +142,9 @@ def test_comma_layout_signals(comma_layout_path):
 def test_comma_layout_eeg_and_hfeeg_matched_by_length(comma_layout_path):
     with h5py.File(comma_layout_path, "a") as file:
         eeg = file["EEG"]
-        eeg.create_dataset("HFEEG,Composite,SampleSeries,Composite,Pytest,timestamps", data=T0 + np.arange(20, dtype=np.int64))
+        eeg.create_dataset(
+            "HFEEG,Composite,SampleSeries,Composite,Pytest,timestamps", data=T0 + np.arange(20, dtype=np.int64)
+        )
         eeg.create_dataset("ECoG1", data=np.arange(20, dtype=np.float32))
 
     with moberg_h5.open(comma_layout_path) as rec:
