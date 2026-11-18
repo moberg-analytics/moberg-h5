@@ -7,6 +7,11 @@ on:
 
 permissions: {}
 
+env:
+  # uv.lock records the 2-day exclude-newer cooldown from the maintainer uv config;
+  # without it, --locked sees a changed resolver setting and fails.
+  UV_EXCLUDE_NEWER: "2 days"
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
