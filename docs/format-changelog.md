@@ -19,7 +19,7 @@ First versioned format, written by connect-client releases from November 2026. C
 - File attributes on the root: `format_version`, `converter_name`, `converter_version`, `export_utils_version`, `cns_utils_version`, `source_archive` and `created_utc`. In a file that holds several archives, `source_archive` is set on each `/Patient_*` group.
 - `failed_basenames` file attribute. When some measurements fail to convert, connect-client now keeps the file with the measurements that did convert and lists the failed ones here. Before, any failed measurement meant no file for that patient.
 - `timestamps` attribute on every measurement dataset: the absolute path of its timestamps dataset.
-- `sampling_rate` attribute (nominal Hz) on `SampleSeries` measurement datasets: EEG and HFEEG channels, waveforms and qEEG.
+- `sampling_rate` attribute (nominal Hz) on `SampleSeries` measurement datasets: EEG and HFEEG channels, waveforms and qEEG. Left out when the rate changes during the recording.
 
 ### Changed
 

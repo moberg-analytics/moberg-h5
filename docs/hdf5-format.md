@@ -183,7 +183,7 @@ Every measurement dataset in `EEG`, `Waveforms`, `Trends` and `Other` carries th
 | `data_type` | String | `<Type>` part of the name, such as `SampleSeries` or `Numeric` |
 | `representation` | String | `<Representation>` part of the name, such as `Composite` or `Float` |
 | `timestamps` | String | Absolute path of the timestamps dataset for this data |
-| `sampling_rate` | Float | Nominal sampling rate in Hz. Written for `SampleSeries` measurements only, and left out when there are too few samples to estimate it. |
+| `sampling_rate` | Float | Nominal sampling rate in Hz, for example `125.0` for a waveform measured at 124.95 Hz. Written for `SampleSeries` measurements only. Left out when there are too few samples to estimate it, or when the rate changes during the recording. |
 | `column_axis` | Integer | 2-D qEEG only: the axis that holds the columns (`1`) |
 | `column_names_dataset` | String | 2-D qEEG only: absolute path of the dataset that lists the column labels |
 | `column_count` | Integer | 2-D qEEG only: number of columns |
