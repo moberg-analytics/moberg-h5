@@ -22,7 +22,8 @@ Run every command against `moberg-analytics/moberg-h5`, in a checkout whose
 
 Done when all of these hold:
 
-- `git fetch origin --tags` succeeded and you are working from `origin/main`.
+- `git fetch origin --tags` succeeded and you are working from `origin/main`
+  with a clean worktree.
 - The latest CI run on `main` is for the current `origin/main` commit and
   passed: `gh run list -R moberg-analytics/moberg-h5 --workflow ci.yml --branch main --limit 1 --json headSha,conclusion,url`.
   A run for an older commit does not count.
@@ -38,11 +39,13 @@ Read `CHANGELOG.md` `## Unreleased` and `git log <last tag>..origin/main`.
 - Otherwise bump. While the version is `0.x`, a change that breaks callers is
   a minor bump and everything else is a patch.
 
-Tony confirms the version before you open the PR.
+When Tony's request names the version, that is his confirmation. Otherwise
+propose one and wait for his answer.
 
-## 3. Release PR
+## 3. Release commit
 
-On a branch `release/vX.Y.Z` from `origin/main`:
+The release commit goes straight onto `main`; Tony's approval of the `pypi`
+deployment is the review. On a detached checkout of `origin/main`:
 
 1. `uv version X.Y.Z` when bumping. It rewrites `pyproject.toml` and relocks
    `uv.lock`. In `git diff uv.lock`, moberg-h5's `version` is the only package
@@ -55,23 +58,22 @@ On a branch `release/vX.Y.Z` from `origin/main`:
    accepts or how it reads them (`SUPPORTED_MAJOR`, layout handling), check
    that `docs/format-changelog.md` covers it and ask Tony if it does not.
 4. `uv run --locked pytest` passes.
-5. Open the PR titled `Release vX.Y.Z` and give Tony its URL.
+5. Commit only those files as `Release vX.Y.Z`.
 
-Done when the PR is merged into `main`.
+## 4. Push and tag
 
-## 4. Tag
+Push the commit and the tag in one atomic push over SSH, so `main` never holds
+a release commit without its tag:
 
 ```sh
-git fetch origin
-sha=$(git rev-parse origin/main)
-git tag -a vX.Y.Z "$sha" -m "moberg-h5 X.Y.Z"
-git push origin vX.Y.Z
+git tag -a vX.Y.Z -m "moberg-h5 X.Y.Z"
+sha=$(git rev-parse HEAD)
+git push --atomic origin HEAD:main vX.Y.Z
 ```
 
-`origin/main` must be the merge commit of the release PR. Check
-`git show "$sha":pyproject.toml` reports `X.Y.Z` before pushing. A pushed tag is
-the release trigger, so get Tony's go-ahead if anything else landed on `main`
-after the PR merged.
+A rejected push means `main` moved. Delete the local tag, rebase the release
+commit onto the new `origin/main`, rerun the tests, and push again. Never force
+`main`.
 
 ## 5. Hand over the approval
 
