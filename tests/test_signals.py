@@ -62,7 +62,7 @@ def test_filters(v1_path):
         assert [s.channel for s in rec.eeg_channels()] == ["C3", "C4", "Fp1"]
         assert [s.channel for s in rec.eeg_channels("HFEEG")] == ["C3"]
         with pytest.raises(ValueError):
-            rec.signals(kind="eegs")
+            rec.signals(kind="eegs")  # ty: ignore[invalid-argument-type]
         with pytest.raises(KeyError):
             rec.signal("EEG/EEG_Composite_Timestamps")
 
@@ -88,9 +88,8 @@ def test_missing_timestamps_target_is_skipped_with_warning(v1_path):
     with h5py.File(v1_path, "a") as file:
         file["Trends/HR_na"].attrs["timestamps"] = "/Trends/nope"
 
-    with moberg_h5.open(v1_path) as rec:
-        with pytest.warns(UserWarning, match="missing dataset /Trends/nope"):
-            paths = [signal.path for signal in rec.signals()]
+    with moberg_h5.open(v1_path) as rec, pytest.warns(UserWarning, match="missing dataset /Trends/nope"):
+        paths = [signal.path for signal in rec.signals()]
 
     assert "/Trends/HR_na" not in paths
 

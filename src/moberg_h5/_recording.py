@@ -5,7 +5,7 @@ import re
 import warnings
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal
 
 import h5py
 import numpy as np
@@ -15,6 +15,7 @@ from moberg_h5._time import TimeLike, TimeRange, to_epoch_us
 
 if TYPE_CHECKING:
     import pandas as pd
+    from typing_extensions import Self
 
 SUPPORTED_MAJOR = 1
 DATA_GROUPS = ("EEG", "Waveforms", "Trends", "Other")
@@ -76,7 +77,7 @@ class Annotation:
     archive: str | None
 
 
-SignalRef = Union[Signal, str]
+SignalRef = Signal | str
 
 
 class Recording:
@@ -92,7 +93,7 @@ class Recording:
         self._warned_lengths: set[str] = set()
         self._ranges: dict[tuple[str, int], TimeRange] = {}
 
-    def __enter__(self) -> Recording:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc_info: object) -> None:

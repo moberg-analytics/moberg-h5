@@ -22,7 +22,7 @@ FP1_FIRST_ROW = 4
 
 
 def _meta(basename: str, units: str = "uV") -> dict[str, object]:
-    modality, location, data_type, representation, source = basename.split(",")
+    _modality, location, data_type, representation, source = basename.split(",")
     return {
         "number_points": 10,
         "start_time": int(EEG_TIMESTAMPS[0]),

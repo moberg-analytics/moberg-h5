@@ -18,6 +18,7 @@ TS = EEG_TIMESTAMPS
 def test_signal_range_is_a_read_window(v1_path):
     with moberg_h5.open(v1_path) as rec:
         span = rec.time_range("EEG/C3")
+        assert span is not None
         timestamps, _ = rec.read("EEG/C3", *span)
         by_datetime, _ = rec.read("EEG/C3", span.start, span.end)
 
@@ -32,6 +33,7 @@ def test_range_ignores_time_attributes(v1_path):
         del file["Trends/HR_na"].attrs["end_time"]
     with moberg_h5.open(v1_path) as rec:
         span = rec.time_range("Trends/HR_na")
+        assert span is not None
         timestamps, _ = rec.read("Trends/HR_na", *span)
     assert span.start_us == T0
     assert len(timestamps) == 5
@@ -85,6 +87,7 @@ def test_legacy_length_mismatch_ends_at_last_readable_row(legacy_path):
     with moberg_h5.open(legacy_path) as rec:
         with pytest.warns(UserWarning, match="reading the first 7 rows"):
             span = rec.time_range("Waveforms/ECG_II")
+        assert span is not None
         timestamps, _ = rec.read("Waveforms/ECG_II", *span)
     assert span == (TS[0], TS[6] + 1)
     assert len(timestamps) == 7
@@ -149,6 +152,5 @@ def test_summary(v1_path):
 
 def test_summary_without_pandas(v1_path, monkeypatch):
     monkeypatch.setitem(sys.modules, "pandas", None)
-    with moberg_h5.open(v1_path) as rec:
-        with pytest.raises(ImportError, match=r"summary needs pandas"):
-            rec.summary()
+    with moberg_h5.open(v1_path) as rec, pytest.raises(ImportError, match=r"summary needs pandas"):
+        rec.summary()

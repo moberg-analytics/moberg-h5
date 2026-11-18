@@ -1,0 +1,11 @@
+#:schema https://www.schemastore.org/prek.json
+# Hooks run the ruff and ty versions locked in uv.lock, the same ones CI uses.
+# CI skips ruff-format; formatting is only enforced locally.
+
+[[repos]]
+repo = "local"
+hooks = [
+    { id = "ruff-check", name = "ruff check", language = "system", entry = "uv run --locked ruff check --force-exclude", types = ["python"] },
+    { id = "ruff-format", name = "ruff format", language = "system", entry = "uv run --locked ruff format --force-exclude", types = ["python"] },
+    { id = "ty", name = "ty check", language = "system", entry = "uv run --locked ty check", types = ["python"], pass_filenames = false },
+]

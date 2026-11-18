@@ -89,9 +89,8 @@ def test_legacy_length_mismatch_warns_and_truncates(legacy_path):
     with h5py.File(legacy_path, "a") as file:
         file["EEG/C4"].resize((8,))
 
-    with moberg_h5.open(legacy_path) as rec:
-        with pytest.warns(UserWarning, match="has 8 rows"):
-            timestamps, values = rec.read("EEG/C4")
+    with moberg_h5.open(legacy_path) as rec, pytest.warns(UserWarning, match="has 8 rows"):
+        timestamps, values = rec.read("EEG/C4")
 
     assert len(timestamps) == len(values) == 8
 
@@ -100,9 +99,8 @@ def test_v1_length_mismatch_raises(v1_path):
     with h5py.File(v1_path, "a") as file:
         file["EEG/C4"].resize((8,))
 
-    with moberg_h5.open(v1_path) as rec:
-        with pytest.raises(moberg_h5.FormatError, match="has 8 rows"):
-            rec.read("EEG/C4")
+    with moberg_h5.open(v1_path) as rec, pytest.raises(moberg_h5.FormatError, match="has 8 rows"):
+        rec.read("EEG/C4")
 
 
 def test_comma_layout_signals(comma_layout_path):
@@ -153,9 +151,8 @@ def test_comma_layout_ambiguous_channel_is_skipped(comma_layout_path):
     with h5py.File(comma_layout_path, "a") as file:
         file["EEG"].create_dataset("HFEEG,Composite,SampleSeries,Composite,Pytest,timestamps", data=EEG_TIMESTAMPS)
 
-    with moberg_h5.open(comma_layout_path) as rec:
-        with pytest.warns(UserWarning, match="cannot tell which"):
-            paths = [signal.path for signal in rec.signals()]
+    with moberg_h5.open(comma_layout_path) as rec, pytest.warns(UserWarning, match="cannot tell which"):
+        paths = [signal.path for signal in rec.signals()]
 
     assert "/EEG/C3" not in paths
     assert "/Waveforms/ABP,na,SampleSeries,Float,Pytest" in paths

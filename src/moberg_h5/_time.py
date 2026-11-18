@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 import numpy as np
 
-TimeLike = Union[int, np.integer, np.datetime64, datetime]
+TimeLike = int | np.integer | np.datetime64 | datetime
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 _ONE_US = timedelta(microseconds=1)
@@ -60,9 +60,10 @@ def to_epoch_us(value: TimeLike) -> int:
         raise TypeError("expected a time, got a bool")
     if isinstance(value, (int, np.integer)):
         return int(value)
-    if hasattr(value, "to_datetime64"):
+    to_datetime64 = getattr(value, "to_datetime64", None)
+    if callable(to_datetime64):
         # pandas.Timestamp: to_datetime64() is the UTC instant for tz-aware values.
-        return _datetime64_to_us(value.to_datetime64())
+        return _datetime64_to_us(to_datetime64())
     if isinstance(value, np.datetime64):
         return _datetime64_to_us(value)
     if isinstance(value, datetime):

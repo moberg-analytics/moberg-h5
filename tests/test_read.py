@@ -61,7 +61,8 @@ def test_time_types_are_equivalent(v1_path):
         (pd.Timestamp(start_us, unit="us", tz="UTC").tz_convert("US/Pacific"), pd.Timestamp(end_us, unit="us")),
     ]
     with moberg_h5.open(v1_path) as rec:
-        results = [rec.read("EEG/C3", start, end)[0] for start, end in variants]
+        # pandas types Timestamp(...) as Timestamp | NaTType.
+        results = [rec.read("EEG/C3", start, end)[0] for start, end in variants]  # ty: ignore[invalid-argument-type]
 
     for timestamps in results:
         np.testing.assert_array_equal(timestamps, TS[2:8])
@@ -69,13 +70,13 @@ def test_time_types_are_equivalent(v1_path):
 
 def test_rejects_float_times(v1_path):
     with moberg_h5.open(v1_path) as rec, pytest.raises(TypeError):
-        rec.read("EEG/C3", float(TS[2]))
+        rec.read("EEG/C3", float(TS[2]))  # ty: ignore[invalid-argument-type]
 
 
 def test_nan_rows_for_channel_absent_from_early_segments(v1_path):
     with moberg_h5.open(v1_path) as rec:
         timestamps, values = rec.read("EEG/Fp1")
-        sliced_ts, sliced = rec.read("EEG/Fp1", int(TS[FP1_FIRST_ROW - 1]), int(TS[FP1_FIRST_ROW + 1]))
+        _, sliced = rec.read("EEG/Fp1", int(TS[FP1_FIRST_ROW - 1]), int(TS[FP1_FIRST_ROW + 1]))
 
     assert len(timestamps) == len(values) == 10
     assert np.isnan(values[:FP1_FIRST_ROW]).all()
@@ -102,7 +103,7 @@ def test_binary_search_reads_few_timestamps():
 
     n = 1_000_000
     timestamps = CountingTimestamps(np.arange(n, dtype=np.int64) * 10)
-    lo, hi = _slice_bounds(timestamps, n, 123_455, 9_000_000)
+    lo, hi = _slice_bounds(timestamps, n, 123_455, 9_000_000)  # ty: ignore[invalid-argument-type]
     assert (lo, hi) == (12_346, 900_000)
     assert timestamps.reads <= 2 * 21
 
@@ -112,6 +113,7 @@ def test_read_frame_eeg_channels(v1_path):
         frame = rec.read_frame(rec.eeg_channels(), int(TS[3]), int(TS[7]))
 
     assert list(frame.columns) == ["C3", "C4", "Fp1"]
+    assert isinstance(frame.index, pd.DatetimeIndex)
     assert str(frame.index.tz) == "UTC"
     assert frame.index.name == "time"
     assert frame.index.equals(pd.to_datetime(TS[3:7], unit="us", utc=True))
@@ -127,9 +129,8 @@ def test_read_frame_uses_column_names(v1_path):
 
 
 def test_read_frame_rejects_mixed_timestamps(v1_path):
-    with moberg_h5.open(v1_path) as rec:
-        with pytest.raises(ValueError, match="share a timestamps dataset"):
-            rec.read_frame(["EEG/C3", "EEG/HFEEG_C3"])
+    with moberg_h5.open(v1_path) as rec, pytest.raises(ValueError, match="share a timestamps dataset"):
+        rec.read_frame(["EEG/C3", "EEG/HFEEG_C3"])
 
 
 def test_read_frame_without_pandas(v1_path, monkeypatch):
@@ -147,7 +148,8 @@ def test_read_frame_without_pandas(v1_path, monkeypatch):
         lambda start_ns, end_ns: (np.datetime64(start_ns, "ns"), np.datetime64(end_ns, "ns")),
         lambda start_ns, end_ns: (pd.Timestamp(start_ns, unit="ns", tz="UTC"), pd.Timestamp(end_ns, unit="ns", tz="UTC")),
         lambda start_ns, end_ns: (pd.Timestamp(start_ns, unit="ns"), pd.Timestamp(end_ns, unit="ns").tz_localize("UTC").tz_convert("US/Eastern")),
-        lambda start_ns, end_ns: (np.datetime64(start_ns // 10, "10ns"), np.datetime64(end_ns // 10, "10ns")),
+        # numpy's stubs do not accept multiplied units such as "10ns".
+        lambda start_ns, end_ns: (np.datetime64(start_ns // 10, "10ns"), np.datetime64(end_ns // 10, "10ns")),  # ty: ignore[no-matching-overload]
     ],
 )
 def test_sub_microsecond_bounds_round_up(v1_path, make_bounds):
@@ -170,6 +172,6 @@ def test_whole_microsecond_and_coarse_bounds_are_exact():
     assert to_epoch_us(np.datetime64(1_700_000_000_123_456_001, "ns")) == 1_700_000_000_123_457
     assert to_epoch_us(np.datetime64(-1_500, "ns")) == -1
     assert to_epoch_us(np.datetime64("2026-11-04T12:00:00", "s")) == 1_793_793_600_000_000
-    assert to_epoch_us(pd.Timestamp("2026-11-04T12:00:00.0000005Z")) == 1_793_793_600_000_001
+    assert to_epoch_us(pd.Timestamp("2026-11-04T12:00:00.0000005Z")) == 1_793_793_600_000_001  # ty: ignore[invalid-argument-type]
     with pytest.raises(ValueError):
         to_epoch_us(np.datetime64("NaT", "ns"))
